@@ -10,8 +10,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.complaint import ComplaintCreate, ComplaintResponse, StatusEnum
-from models.analysis import AnalysisResult
+from models import ComplaintCreate, ComplaintResponse, StatusEnum, AnalysisResult
 from services.complaint_service import ComplaintService
 from database import get_db
 

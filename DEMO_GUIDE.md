@@ -93,7 +93,18 @@ The assignment requests two core areas:
 
 ### Part 2: Code & Architecture Walkthrough (3–4 mins)
 
-Walk the reviewer through the code following the path of a single request:
+> **🎯 The 2-Minute Quick Explanation (Read this in your video):**
+>
+> *"Our architecture follows a clean, decoupled 5-tier design:*
+> 1. * **Frontend UI (`frontend/src/components/`)**: Built in React with Tailwind CSS and Google Inter typography. We created a reusable `FormField` component that binds directly to our Redux store. It automatically handles input changes and displays AI sparkle indicators (`✦`) whenever data is populated by AI and untouched by the user.
+> 2. * **State Management (`frontend/src/store/`)**: Using Redux Toolkit across 4 dedicated slices: `complaintSlice` for form fields and dirty-tracking, `analysisSlice` for AI risk assessment and completeness scores, `copilotSlice` for chat interactions and action dispatching, and `complaintsSlice` for history.
+> 3. * **API Gateway (`backend/routes/`)**: FastAPI endpoints with Pydantic validation. The `/api/copilot/message` endpoint acts as an Agentic Intent Router that classifies whether the user is logging a new complaint (Tool 1), editing specific fields in natural language (Tool 2), or asking QA questions.
+> 4. * **AI Agentic Workflow (`backend/graph/`)**: Orchestrated using **LangGraph** across 5 sequential nodes: entity extraction, deterministic validation, completeness scoring, risk assessment with CAPA hypotheses, and executive summary generation using Groq.
+> 5. * **Database Layer (`backend/database.py` & `models/`)**: Persistent storage in local **PostgreSQL 18** using async SQLAlchemy ORM and Psycopg 3 with 1-to-1 relational cascade between `complaints` and `analyses`.*"
+
+---
+
+#### Detailed Code Walkthrough
 
 #### 1. Frontend: Redux State & Form Handling
 - `frontend/src/store/analysisSlice.js`:

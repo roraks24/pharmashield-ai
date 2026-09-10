@@ -11,8 +11,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from models.complaint import ComplaintCreate, ComplaintResponse
-from models.db_models import ComplaintDB, AnalysisDB
+from models import ComplaintCreate, ComplaintResponse, ComplaintDB, AnalysisDB
 from fastapi import HTTPException
 import logging
 

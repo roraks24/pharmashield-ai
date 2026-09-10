@@ -9,7 +9,7 @@ import json
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.analysis import AnalyzeResponse, AnalysisResult
+from models import AnalyzeResponse, AnalysisResult
 from services.document_parser import parse_document
 from services.complaint_service import ComplaintService
 from graph.workflow import graph
