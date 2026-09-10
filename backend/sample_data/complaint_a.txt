@@ -1,0 +1,6 @@
+Complaint Source: Email
+Customer Name: ABC Pharma
+Customer Contact: abc@pharma.com
+Product Name: Metformin API
+Batch Number: MH24032
+Description: During our routine inspection of the received API batch, our quality control team discovered foreign particles that appear to be metallic shavings in multiple drums. This poses a significant risk to patient safety if used in final dosage forms. We are returning the entire batch immediately. Please investigate this as a critical issue.

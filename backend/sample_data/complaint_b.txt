@@ -1,0 +1,5 @@
+Complaint received via customer portal.
+Product: Amoxicillin capsules
+Manufacturer: MedSupply Corp
+Batch: AMX-9981
+Issue: The packaging label on the carton says 500mg, but the foil blister pack inside says 250mg. This is confusing for patients but we caught it before dispensing. Please correct the labeling.

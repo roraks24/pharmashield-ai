@@ -1,0 +1,2 @@
+Source: Email
+Description: Hey, we received a shipment of those white tablets you sent us last week and some of them have weird yellow discoloration on the edges. What should we do with them? Are they safe?
