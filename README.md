@@ -4,7 +4,7 @@
 
 ---
 
-## 📋 Product Overview
+## Product Overview
 
 AIVOA automates the intake and initial assessment of customer complaints in pharmaceutical manufacturing. Instead of manually reading complaint emails/documents and filling forms, users can:
 
