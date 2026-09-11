@@ -1,19 +1,19 @@
 """Routes for the AI Copilot.
 
-POST /api/copilot/analyze  — Run the full LangGraph intake workflow.
-POST /api/copilot/message   — Conversational copilot grounded in complaint context.
+POST /api/copilot/analyze  — Run the full LangGraph intake workflow via ComplaintService.
+POST /api/copilot/message   — Conversational copilot with agentic intent routing (Log, Edit, Chat).
 """
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
-from typing import Optional
+from typing import Optional, Dict, Any
 import json
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models import AnalyzeResponse, AnalysisResult
+from models import AnalyzeResponse, CopilotMessageResponse
 from services.document_parser import parse_document
 from services.complaint_service import ComplaintService
-from graph.workflow import graph
-from config import settings
+from graph.nodes import _call_groq
+from utils.helpers import parse_json_from_llm
 from database import get_db
 
 logger = logging.getLogger(__name__)
@@ -28,13 +28,12 @@ async def analyze_complaint(
     file: Optional[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
 ):
-    """Analyze complaint text or uploaded document through the LangGraph pipeline.
+    """Analyze complaint text or uploaded document through the centralized LangGraph pipeline.
 
     Accepts either raw text via form field or a file upload (.pdf, .txt).
     Returns extracted complaint fields plus AI analysis (risk, completeness,
     summary, root-cause hypotheses, CAPA recommendations).
     """
-    # ── Input validation ──
     if not text and not file:
         raise HTTPException(
             status_code=400,
@@ -51,55 +50,18 @@ async def analyze_complaint(
             detail="Could not extract any text from the provided input.",
         )
 
-    # ── Run LangGraph workflow ──
-    initial_state = {"raw_text": raw_text, "errors": []}
-
     try:
-        result = graph.invoke(initial_state)
+        extracted_data, analysis = await ComplaintService.execute_intake_pipeline(db, raw_text)
+        return AnalyzeResponse(complaint=extracted_data, analysis=analysis)
     except Exception as exc:
-        logger.error("LangGraph invocation failed: %s", exc)
+        logger.error("AI analysis pipeline failed: %s", exc)
         raise HTTPException(
             status_code=500,
             detail=f"AI analysis pipeline failed: {exc}",
         )
 
-    # ── Log any non-fatal graph errors ──
-    if result.get("errors"):
-        logger.warning("Graph completed with errors: %s", result["errors"])
 
-    # ── Assemble response ──
-    extracted_data = result.get("validated_complaint") or result.get("extracted_complaint") or {}
-    risk_data = result.get("risk_assessment", {})
-    completeness_data = result.get("completeness_result", {})
-    summary_text = result.get("summary")
-
-    # ── Duplicate detection (Bonus Feature) ──
-    dup_info = await ComplaintService.find_potential_duplicates(
-        db,
-        product_name=extracted_data.get("product_name"),
-        batch_number=extracted_data.get("batch_number"),
-        description=extracted_data.get("description"),
-    )
-    dup_score = dup_info.get("duplicate_score") if dup_info else 0.0
-    dup_reason = dup_info.get("duplicate_reason") if dup_info else None
-
-    analysis = AnalysisResult(
-        summary=summary_text,
-        completeness_score=completeness_data.get("score"),
-        missing_fields=completeness_data.get("missing_fields"),
-        risk_level=risk_data.get("risk_level"),
-        risk_reason=risk_data.get("risk_reason"),
-        recommended_next_action=risk_data.get("recommended_next_action"),
-        root_cause_hypotheses=risk_data.get("root_cause_hypotheses"),
-        capa_recommendations=risk_data.get("capa_recommendations"),
-        duplicate_score=dup_score,
-        duplicate_reason=dup_reason,
-    )
-
-    return AnalyzeResponse(complaint=extracted_data, analysis=analysis)
-
-
-# ── Copilot chat endpoint with Agentic Intent Router ─────────────
+# ── Copilot Agentic Intent Router System Prompt ───────────────────
 
 COPILOT_ROUTER_SYSTEM = """\
 You are the AI Assistant for AIVOA, an AI-powered pharmaceutical complaint management system.
@@ -147,7 +109,65 @@ Return ONLY a JSON object with this exact structure:
 """
 
 
-@router.post("/message")
+# ── Modular Action Handlers ───────────────────────────────────────
+
+def _handle_update_complaint(
+    updated_fields: Dict[str, Any], assistant_response: str
+) -> CopilotMessageResponse:
+    """Handle Tool 2: partial natural language form field updates."""
+    logger.info("Copilot updating fields: %s", list(updated_fields.keys()))
+    if not assistant_response:
+        field_summary = ", ".join(f"{k.replace('_', ' ').title()}: {v}" for k, v in updated_fields.items())
+        assistant_response = (
+            f"I have updated the complaint form with: {field_summary}. "
+            "All other complaint details and risk assessment have been preserved."
+        )
+    return CopilotMessageResponse(
+        action="UPDATE_COMPLAINT",
+        response=assistant_response,
+        updated_fields=updated_fields,
+    )
+
+
+async def _handle_log_complaint(
+    clean_message: str, assistant_response: str, db: AsyncSession
+) -> CopilotMessageResponse:
+    """Handle Tool 1: full narrative extraction via LangGraph intake pipeline."""
+    logger.info("Copilot logging new complaint from chat message")
+    try:
+        extracted_data, analysis = await ComplaintService.execute_intake_pipeline(db, clean_message)
+        customer = extracted_data.get("customer_name") or "customer"
+        product = extracted_data.get("product_name") or "the specified product"
+        if not assistant_response:
+            assistant_response = (
+                f"I have extracted the complaint details from {customer} regarding {product} "
+                "and populated the form. AI Risk Assessment and completeness checks are ready for review."
+            )
+        return CopilotMessageResponse(
+            action="LOG_COMPLAINT",
+            response=assistant_response,
+            complaint=extracted_data,
+            analysis=analysis.model_dump(),
+        )
+    except Exception as exc:
+        logger.error("LangGraph complaint extraction failed: %s", exc)
+        return CopilotMessageResponse(
+            action="GENERAL_CHAT",
+            response=f"I attempted to log the complaint but encountered an error: {exc}. Please verify the input.",
+        )
+
+
+def _handle_general_chat(assistant_response: str) -> CopilotMessageResponse:
+    """Handle general pharmaceutical QA advisory queries."""
+    return CopilotMessageResponse(
+        action="GENERAL_CHAT",
+        response=assistant_response or "I am here to assist with your complaint management workflow.",
+    )
+
+
+# ── Copilot chat endpoint with Agentic Intent Router ─────────────
+
+@router.post("/message", response_model=CopilotMessageResponse)
 async def copilot_message(
     message: str = Form(...),
     complaint_context: Optional[str] = Form(None),
@@ -160,9 +180,6 @@ async def copilot_message(
     - Tool 2 (Edit Complaint): Natural language updates to specific form fields while preserving existing data.
     - General QA Chat: Expert quality guidance grounded in complaint context.
     """
-    from graph.nodes import _call_groq
-    from utils.helpers import parse_json_from_llm
-
     if not message or not message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty.")
 
@@ -176,7 +193,6 @@ async def copilot_message(
         except Exception:
             context_dict = {}
 
-    # Build prompt for intent router
     router_user_prompt = f"""\
 CURRENT COMPLAINT CONTEXT:
 {json.dumps(context_dict, indent=2, default=str) if context_dict else "None (form is empty)"}
@@ -201,76 +217,13 @@ USER MESSAGE:
     updated_fields = router_result.get("updated_fields") or {}
     assistant_response = router_result.get("response") or ""
 
-    # ── Tool 2: EDIT COMPLAINT ─────────────────────────────────────────
+    # Dispatch to dedicated modular handlers
     if action == "UPDATE_COMPLAINT" and updated_fields:
-        logger.info("Copilot updating fields: %s", list(updated_fields.keys()))
-        if not assistant_response:
-            field_summary = ", ".join(f"{k.replace('_', ' ').title()}: {v}" for k, v in updated_fields.items())
-            assistant_response = f"I have updated the complaint form with: {field_summary}. All other complaint details and risk assessment have been preserved."
-        return {
-            "action": "UPDATE_COMPLAINT",
-            "response": assistant_response,
-            "updated_fields": updated_fields,
-        }
+        return _handle_update_complaint(updated_fields, assistant_response)
 
-    # ── Tool 1: LOG COMPLAINT ──────────────────────────────────────────
     if action == "LOG_COMPLAINT":
-        logger.info("Copilot logging new complaint from chat message")
-        initial_state = {"raw_text": clean_message, "errors": []}
-        try:
-            result = graph.invoke(initial_state)
-            extracted_data = result.get("validated_complaint") or result.get("extracted_complaint") or {}
-            risk_data = result.get("risk_assessment", {})
-            completeness_data = result.get("completeness_result", {})
-            summary_text = result.get("summary")
+        return await _handle_log_complaint(clean_message, assistant_response, db)
 
-            # Duplicate check
-            dup_info = await ComplaintService.find_potential_duplicates(
-                db,
-                product_name=extracted_data.get("product_name"),
-                batch_number=extracted_data.get("batch_number"),
-                description=extracted_data.get("description"),
-            )
-            dup_score = dup_info.get("duplicate_score") if dup_info else 0.0
-            dup_reason = dup_info.get("duplicate_reason") if dup_info else None
+    return _handle_general_chat(assistant_response)
 
-            analysis = AnalysisResult(
-                summary=summary_text,
-                completeness_score=completeness_data.get("score"),
-                missing_fields=completeness_data.get("missing_fields"),
-                risk_level=risk_data.get("risk_level"),
-                risk_reason=risk_data.get("risk_reason"),
-                recommended_next_action=risk_data.get("recommended_next_action"),
-                root_cause_hypotheses=risk_data.get("root_cause_hypotheses"),
-                capa_recommendations=risk_data.get("capa_recommendations"),
-                duplicate_score=dup_score,
-                duplicate_reason=dup_reason,
-            )
-
-            customer = extracted_data.get("customer_name") or "customer"
-            product = extracted_data.get("product_name") or "the specified product"
-            if not assistant_response:
-                assistant_response = (
-                    f"I have extracted the complaint details from {customer} regarding {product} "
-                    f"and populated the form. AI Risk Assessment and completeness checks are ready for review."
-                )
-
-            return {
-                "action": "LOG_COMPLAINT",
-                "response": assistant_response,
-                "complaint": extracted_data,
-                "analysis": analysis.model_dump(),
-            }
-        except Exception as exc:
-            logger.error("LangGraph complaint extraction failed: %s", exc)
-            return {
-                "action": "GENERAL_CHAT",
-                "response": f"I attempted to log the complaint but encountered an error: {exc}. Please verify the input.",
-            }
-
-    # ── General QA Chat ───────────────────────────────────────────────
-    return {
-        "action": "GENERAL_CHAT",
-        "response": assistant_response or "I am here to assist with your complaint management workflow.",
-    }
 

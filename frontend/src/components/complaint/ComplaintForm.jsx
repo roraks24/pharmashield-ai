@@ -14,19 +14,15 @@ const ComplaintForm = () => {
   const { formData, saveStatus, savedComplaintId } = useSelector((state) => state.complaint);
   const { extractedData, extractionStatus, rawAnalysis } = useSelector((state) => state.analysis);
 
-  // Auto-populate form when AI extraction succeeds
-  useEffect(() => {
-    if (extractionStatus === 'success' && extractedData) {
-      dispatch(updateMultipleFields({ fields: extractedData, isAIPopulated: true }));
-    }
-  }, [extractionStatus, extractedData, dispatch]);
+  const [clientError, setClientError] = React.useState(null);
 
   const handleSave = (e) => {
     e.preventDefault();
+    setClientError(null);
 
-    // Basic validation
+    // Pharma complaint records require a non-empty description narrative
     if (!formData.description || !formData.description.trim()) {
-      alert('Description is required before saving.');
+      setClientError('Detailed Complaint Description is required before saving.');
       return;
     }
 
@@ -35,10 +31,12 @@ const ComplaintForm = () => {
 
   const handleReset = () => {
     if (window.confirm('Reset all fields and analysis? This cannot be undone.')) {
+      setClientError(null);
       dispatch(resetForm());
       dispatch(resetAnalysis());
     }
   };
+
 
   const getStatusBadge = () => {
     const status = formData.status || 'Draft';
@@ -64,6 +62,12 @@ const ComplaintForm = () => {
       </div>
 
       {/* Status banners */}
+      {clientError && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-300 text-amber-800 rounded-lg text-sm font-medium">
+          {clientError}
+        </div>
+      )}
+
       {saveStatus === 'saved' && (
         <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-sm flex items-center gap-2">
           <CheckCircle className="h-4 w-4" />
@@ -75,6 +79,7 @@ const ComplaintForm = () => {
           )}
         </div>
       )}
+
 
       {saveStatus === 'error' && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">

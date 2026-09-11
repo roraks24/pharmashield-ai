@@ -22,16 +22,18 @@ const FormField = ({
   disabled = false,
 }) => {
   const dispatch = useDispatch();
-  const { formData, dirtyFields } = useSelector((state) => state.complaint);
-  const { extractedData } = useSelector((state) => state.analysis);
+  // Fine-grained selectors isolate re-renders strictly to this specific field
+  const value = useSelector((state) => state.complaint.formData[name] ?? '');
+  const isDirty = useSelector((state) => Boolean(state.complaint.dirtyFields[name]));
+  const isExtracted = useSelector((state) => Boolean(state.analysis.extractedData?.[name]));
 
   // Field is AI populated if it was extracted by AI and not manually dirtied by the user
-  const isAiPopulated = Boolean(extractedData && extractedData[name] && !dirtyFields[name]);
-  const value = formData[name] ?? '';
+  const isAiPopulated = Boolean(isExtracted && !isDirty);
 
   const handleChange = (e) => {
     dispatch(updateField({ field: name, value: e.target.value, isAIPopulated: false }));
   };
+
 
   const baseInputStyle = `w-full p-2 border rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-colors ${
     isAiPopulated ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-300'

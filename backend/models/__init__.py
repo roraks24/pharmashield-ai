@@ -2,12 +2,14 @@
 
 Exports:
     Pydantic Schemas:
-        - ComplaintCreate, ComplaintResponse, SeverityEnum, PriorityEnum, StatusEnum
-        - AnalysisResult, AnalyzeResponse, AnalyzeRequest
+        - ComplaintSourceEnum, ComplaintBase, ComplaintCreate, ComplaintResponse
+        - SeverityEnum, PriorityEnum, StatusEnum
+        - AnalysisResult, AnalyzeResponse, CopilotMessageResponse
     SQLAlchemy ORM Models:
         - ComplaintDB, AnalysisDB
 """
 from models.complaint import (
+    ComplaintSourceEnum,
     ComplaintBase,
     ComplaintCreate,
     ComplaintResponse,
@@ -18,7 +20,7 @@ from models.complaint import (
 from models.analysis import (
     AnalysisResult,
     AnalyzeResponse,
-    AnalyzeRequest,
+    CopilotMessageResponse,
 )
 from models.db_models import (
     ComplaintDB,
@@ -26,6 +28,7 @@ from models.db_models import (
 )
 
 __all__ = [
+    "ComplaintSourceEnum",
     "ComplaintBase",
     "ComplaintCreate",
     "ComplaintResponse",
@@ -34,7 +37,8 @@ __all__ = [
     "StatusEnum",
     "AnalysisResult",
     "AnalyzeResponse",
-    "AnalyzeRequest",
+    "CopilotMessageResponse",
     "ComplaintDB",
     "AnalysisDB",
 ]
+

@@ -1,37 +1,55 @@
-"""Service layer for managing complaints.
+"""Service layer for managing complaints and executing AI intake pipelines.
 
-Provides async CRUD operations for complaint records and their
-associated AI analysis results, backed by SQLAlchemy.
+Provides async CRUD operations for complaint records, atomic analysis persistence,
+and centralized LangGraph intake execution backed by SQLAlchemy.
 """
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from models import ComplaintCreate, ComplaintResponse, ComplaintDB, AnalysisDB
+from models import ComplaintCreate, ComplaintResponse, ComplaintDB, AnalysisDB, AnalysisResult
 from fastapi import HTTPException
 import logging
 
 logger = logging.getLogger(__name__)
 
+# Constants for pharma QA duplicate matching
+EXACT_BATCH_MATCH_SCORE = 0.95
+KEYWORD_OVERLAP_THRESHOLD = 0.4
+FROZEN_STOP_WORDS = frozenset(
+    {"the", "a", "an", "is", "in", "of", "and", "to", "was", "for", "with", "this", "that", "at", "by", "on"}
+)
+
 
 class ComplaintService:
-    """Async service for complaint CRUD and analysis persistence."""
+    """Async service for complaint CRUD, atomic persistence, and pipeline execution."""
 
     # ── Complaint CRUD ────────────────────────────────────────────
 
     @staticmethod
     async def create_complaint(
-        db: AsyncSession, complaint_in: ComplaintCreate
+        db: AsyncSession,
+        complaint_in: ComplaintCreate,
+        analysis_in: Optional[Dict[str, Any]] = None,
     ) -> ComplaintResponse:
-        """Create a new complaint record in the database."""
+        """Create a new complaint record and optionally persist its analysis atomically in one transaction."""
         new_id = str(uuid.uuid4())
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         data = complaint_in.model_dump()
+        # Convert Enum instances to raw string values for DB mapping
+        if hasattr(data.get("complaint_source"), "value"):
+            data["complaint_source"] = data["complaint_source"].value
+        if hasattr(data.get("severity"), "value"):
+            data["severity"] = data["severity"].value
+        if hasattr(data.get("priority"), "value"):
+            data["priority"] = data["priority"].value
+        if hasattr(data.get("status"), "value"):
+            data["status"] = data["status"].value
 
         db_complaint = ComplaintDB(
             id=new_id,
@@ -40,10 +58,29 @@ class ComplaintService:
             **data,
         )
         db.add(db_complaint)
+
+        if analysis_in:
+            db_analysis = AnalysisDB(
+                id=str(uuid.uuid4()),
+                complaint_id=new_id,
+                summary=analysis_in.get("summary"),
+                completeness_score=analysis_in.get("completeness_score"),
+                missing_fields=analysis_in.get("missing_fields"),
+                risk_level=analysis_in.get("risk_level"),
+                risk_reason=analysis_in.get("risk_reason"),
+                recommended_next_action=analysis_in.get("recommended_next_action"),
+                root_cause_hypotheses=analysis_in.get("root_cause_hypotheses"),
+                capa_recommendations=analysis_in.get("capa_recommendations"),
+                duplicate_score=analysis_in.get("duplicate_score"),
+                duplicate_reason=analysis_in.get("duplicate_reason"),
+                confidence=analysis_in.get("confidence"),
+            )
+            db.add(db_analysis)
+
         await db.commit()
         await db.refresh(db_complaint)
 
-        logger.info(f"Created complaint {new_id}")
+        logger.info("Created complaint %s with atomic analysis persistence=%s", new_id, bool(analysis_in))
         return ComplaintResponse(**db_complaint.to_dict())
 
     @staticmethod
@@ -68,7 +105,7 @@ class ComplaintService:
 
     @staticmethod
     async def update_complaint(
-        db: AsyncSession, complaint_id: str, updates: dict
+        db: AsyncSession, complaint_id: str, updates: Dict[str, Any]
     ) -> ComplaintResponse:
         """Update specific fields of a complaint."""
         result = await db.execute(
@@ -82,34 +119,31 @@ class ComplaintService:
             if hasattr(row, key):
                 setattr(row, key, value)
 
-        row.updated_at = datetime.utcnow()
+        row.updated_at = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(row)
 
-        logger.info(f"Updated complaint {complaint_id}")
+        logger.info("Updated complaint %s", complaint_id)
         return ComplaintResponse(**row.to_dict())
 
     # ── Analysis persistence ──────────────────────────────────────
 
     @staticmethod
     async def store_analysis(
-        db: AsyncSession, complaint_id: str, analysis: dict
+        db: AsyncSession, complaint_id: str, analysis: Dict[str, Any]
     ) -> None:
-        """Persist AI analysis result linked to a complaint."""
-        # Check if analysis already exists
+        """Persist or update an AI analysis result linked to a complaint."""
         result = await db.execute(
             select(AnalysisDB).where(AnalysisDB.complaint_id == complaint_id)
         )
         existing = result.scalar_one_or_none()
 
         if existing:
-            # Update existing analysis
             for key, value in analysis.items():
                 if hasattr(existing, key):
                     setattr(existing, key, value)
             await db.commit()
         else:
-            # Create new analysis
             db_analysis = AnalysisDB(
                 id=str(uuid.uuid4()),
                 complaint_id=complaint_id,
@@ -128,7 +162,9 @@ class ComplaintService:
             db.add(db_analysis)
             await db.commit()
 
-        logger.info(f"Stored analysis for complaint {complaint_id}")
+        logger.info("Stored analysis for complaint %s", complaint_id)
+
+    # ── Duplicate detection (Pharma QA GMP heuristic) ──────────────
 
     @staticmethod
     async def find_potential_duplicates(
@@ -136,8 +172,8 @@ class ComplaintService:
         product_name: Optional[str] = None,
         batch_number: Optional[str] = None,
         description: Optional[str] = None,
-    ) -> Optional[dict]:
-        """Find potential duplicate complaints in database based on batch, product, or description keywords."""
+    ) -> Optional[Dict[str, Any]]:
+        """Find potential duplicate complaints based on batch identity or product keyword overlap."""
         # 1. Exact batch match (strongest indicator in pharma manufacturing)
         if batch_number and batch_number.strip():
             result = await db.execute(
@@ -147,8 +183,8 @@ class ComplaintService:
             if matches:
                 matched = matches[0]
                 return {
-                    "duplicate_score": 0.95,
-                    "duplicate_reason": f"Active complaint #{matched.id[:8]} already exists for Batch '{batch_number}'.",
+                    "duplicate_score": EXACT_BATCH_MATCH_SCORE,
+                    "duplicate_reason": f"Active complaint #{matched.id[:8]} already exists for Batch '{batch_number.strip()}'.",
                     "matched_complaint_id": matched.id,
                 }
 
@@ -158,14 +194,13 @@ class ComplaintService:
                 select(ComplaintDB).where(ComplaintDB.product_name.ilike(f"%{product_name.strip()}%"))
             )
             matches = result.scalars().all()
-            stop_words = {"the", "a", "an", "is", "in", "of", "and", "to", "was", "for", "with", "this", "that", "at", "by", "on"}
-            desc_words = set(description.lower().split()) - stop_words
+            desc_words = set(description.lower().split()) - FROZEN_STOP_WORDS
             for m in matches:
                 if m.description:
-                    m_words = set(m.description.lower().split()) - stop_words
+                    m_words = set(m.description.lower().split()) - FROZEN_STOP_WORDS
                     intersection = desc_words.intersection(m_words)
                     overlap_ratio = len(intersection) / max(len(desc_words), 1)
-                    if overlap_ratio > 0.4:
+                    if overlap_ratio > KEYWORD_OVERLAP_THRESHOLD:
                         score = round(min(0.92, 0.5 + overlap_ratio * 0.45), 2)
                         return {
                             "duplicate_score": score,
@@ -176,20 +211,10 @@ class ComplaintService:
         return None
 
     @staticmethod
-    async def get_analysis(db: AsyncSession, complaint_id: str) -> Optional[dict]:
-        """Retrieve AI analysis for a complaint."""
-        result = await db.execute(
-            select(AnalysisDB).where(AnalysisDB.complaint_id == complaint_id)
-        )
-        row = result.scalar_one_or_none()
-        return row.to_dict() if row else None
-
-    @staticmethod
     async def get_complaint_with_analysis(
         db: AsyncSession, complaint_id: str
-    ) -> dict:
-        """Retrieve complaint along with its AI analysis."""
-        # Eagerly load the analysis relationship
+    ) -> Dict[str, Any]:
+        """Retrieve complaint along with its linked AI analysis."""
         result = await db.execute(
             select(ComplaintDB)
             .options(selectinload(ComplaintDB.analysis))
@@ -203,3 +228,52 @@ class ComplaintService:
             "complaint": row.to_dict(),
             "analysis": row.analysis.to_dict() if row.analysis else None,
         }
+
+    # ── Shared AI Intake Pipeline ─────────────────────────────────
+
+    @classmethod
+    async def execute_intake_pipeline(
+        cls, db: AsyncSession, raw_text: str
+    ) -> Tuple[Dict[str, Any], AnalysisResult]:
+        """Execute the LangGraph 5-node intake pipeline, run duplicate matching, and build AnalysisResult.
+
+        Consolidates intake logic shared across `/analyze` and conversational `LOG_COMPLAINT`.
+        """
+        from graph.workflow import graph
+
+        initial_state = {"raw_text": raw_text, "errors": []}
+        result = graph.invoke(initial_state)
+
+        if result.get("errors"):
+            logger.warning("Intake graph completed with non-fatal errors: %s", result["errors"])
+
+        extracted_data = result.get("validated_complaint") or result.get("extracted_complaint") or {}
+        risk_data = result.get("risk_assessment", {})
+        completeness_data = result.get("completeness_result", {})
+        summary_text = result.get("summary")
+
+        # Pharma duplicate check against database
+        dup_info = await cls.find_potential_duplicates(
+            db,
+            product_name=extracted_data.get("product_name"),
+            batch_number=extracted_data.get("batch_number"),
+            description=extracted_data.get("description"),
+        )
+        dup_score = dup_info.get("duplicate_score") if dup_info else 0.0
+        dup_reason = dup_info.get("duplicate_reason") if dup_info else None
+
+        analysis = AnalysisResult(
+            summary=summary_text,
+            completeness_score=completeness_data.get("score"),
+            missing_fields=completeness_data.get("missing_fields"),
+            risk_level=risk_data.get("risk_level"),
+            risk_reason=risk_data.get("risk_reason"),
+            recommended_next_action=risk_data.get("recommended_next_action"),
+            root_cause_hypotheses=risk_data.get("root_cause_hypotheses"),
+            capa_recommendations=risk_data.get("capa_recommendations"),
+            duplicate_score=dup_score,
+            duplicate_reason=dup_reason,
+        )
+
+        return extracted_data, analysis
+

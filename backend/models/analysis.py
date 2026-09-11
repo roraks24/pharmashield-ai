@@ -1,10 +1,10 @@
-"""Pydantic models for AI Analysis."""
+"""Pydantic models for AI Analysis and Copilot responses."""
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from models.complaint import SeverityEnum
 
 class AnalysisResult(BaseModel):
-    """AI analysis output."""
+    """AI analysis output including QA risk, completeness, and CAPA recommendations."""
     complaint_id: Optional[str] = None
     summary: Optional[str] = None
     completeness_score: Optional[int] = Field(None, ge=0, le=100)
@@ -18,11 +18,16 @@ class AnalysisResult(BaseModel):
     recommended_next_action: Optional[str] = None
     confidence: Optional[float] = None
 
-class AnalyzeRequest(BaseModel):
-    """Input to analyze endpoint."""
-    text: Optional[str] = None
-
 class AnalyzeResponse(BaseModel):
-    """Combines complaint extraction + analysis."""
-    complaint: dict
+    """Combined response payload containing extracted complaint fields and AI analysis."""
+    complaint: Dict[str, Any]
     analysis: AnalysisResult
+
+class CopilotMessageResponse(BaseModel):
+    """Structured response from the Copilot agentic message endpoint."""
+    action: str = Field(..., description="Action taken: LOG_COMPLAINT, UPDATE_COMPLAINT, or GENERAL_CHAT")
+    response: str = Field(..., description="Conversational reply text")
+    updated_fields: Optional[Dict[str, Any]] = Field(None, description="Fields extracted for Tool 2 (edit)")
+    complaint: Optional[Dict[str, Any]] = Field(None, description="Full extracted complaint for Tool 1 (log)")
+    analysis: Optional[Dict[str, Any]] = Field(None, description="AI analysis dictionary for Tool 1 (log)")
+

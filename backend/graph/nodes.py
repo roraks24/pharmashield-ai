@@ -36,14 +36,17 @@ def _get_client() -> Groq:
     return _client
 
 
+import time
+
 def _call_groq(
     system_prompt: str,
     user_prompt: str,
     *,
     json_mode: bool = True,
     temperature: float = 0.1,
+    max_tokens: int = 600,
 ) -> str:
-    """Centralised helper for Groq API calls with consistent error handling."""
+    """Centralised helper for Groq API calls with rate-limit backoff and automatic model failover."""
     client = _get_client()
     kwargs: Dict[str, Any] = dict(
         model=settings.model_name,
@@ -52,23 +55,45 @@ def _call_groq(
             {"role": "user", "content": user_prompt},
         ],
         temperature=temperature,
+        max_tokens=max_tokens,
     )
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
 
-    try:
-        response = client.chat.completions.create(**kwargs)
-        return response.choices[0].message.content
-    except Exception as exc:
-        if "model_decommissioned" in str(exc) or "decommissioned" in str(exc):
-            logger.warning(
-                "Model %s is decommissioned by Groq, falling back to qwen/qwen3.8-27b",
-                settings.model_name,
-            )
-            kwargs["model"] = "qwen/qwen3.8-27b"
-            response = client.chat.completions.create(**kwargs)
-            return response.choices[0].message.content
-        raise
+    # Candidate models for failover
+    candidates = [settings.model_name, "qwen/qwen3.8-27b", "openai/gpt-oss-20b"]
+    # Preserve order while eliminating duplicates
+    unique_candidates = []
+    for c in candidates:
+        if c not in unique_candidates:
+            unique_candidates.append(c)
+
+    last_exception = None
+    for model_name in unique_candidates:
+        kwargs["model"] = model_name
+        for attempt in range(2):
+            try:
+                response = client.chat.completions.create(**kwargs)
+                return response.choices[0].message.content
+            except Exception as exc:
+                last_exception = exc
+                err_text = str(exc)
+                if "model_decommissioned" in err_text or "decommissioned" in err_text:
+                    logger.warning("Model %s is decommissioned, switching to next candidate", model_name)
+                    break  # Move to next candidate model
+                if "429" in err_text or "rate_limit" in err_text:
+                    wait_time = 1.5 * (attempt + 1)
+                    logger.warning("Rate limit hit on %s (attempt %d). Backing off %.1fs...", model_name, attempt + 1, wait_time)
+                    time.sleep(wait_time)
+                    continue  # Retry with backoff
+                # For any other fatal exception, break to next candidate
+                logger.error("Error invoking model %s: %s", model_name, exc)
+                break
+
+    if last_exception:
+        raise last_exception
+    raise RuntimeError("All LLM model candidates exhausted.")
+
 
 
 # ── Node 1: Extract ──────────────────────────────────────────────
@@ -177,6 +202,9 @@ def validate_fields(state: ComplaintGraphState) -> dict:
 
 # ── Node 3: Completeness ─────────────────────────────────────────
 
+CRITICAL_FIELD_WEIGHT = 20
+IMPORTANT_FIELD_WEIGHT = 8
+
 _CRITICAL_FIELDS = ["product_name", "batch_number", "description"]
 _IMPORTANT_FIELDS = [
     "customer_name", "complaint_type", "quantity_affected",
@@ -185,7 +213,7 @@ _IMPORTANT_FIELDS = [
 
 
 def check_completeness(state: ComplaintGraphState) -> dict:
-    """Node 3 — Score how complete the complaint record is."""
+    """Node 3 — Score how complete the complaint record is based on critical and important QA fields."""
     validated = state.get("validated_complaint", {})
     if not validated:
         return {"completeness_result": {"score": 0, "missing_fields": ["all"]}}
@@ -196,12 +224,12 @@ def check_completeness(state: ComplaintGraphState) -> dict:
     for f in _CRITICAL_FIELDS:
         if not validated.get(f):
             missing.append(f)
-            score -= 20
+            score -= CRITICAL_FIELD_WEIGHT
 
     for f in _IMPORTANT_FIELDS:
         if not validated.get(f):
             missing.append(f)
-            score -= 8
+            score -= IMPORTANT_FIELD_WEIGHT
 
     score = max(0, score)
 
@@ -211,6 +239,7 @@ def check_completeness(state: ComplaintGraphState) -> dict:
             "missing_fields": missing,
         }
     }
+
 
 
 # ── Node 4: Risk Assessment ──────────────────────────────────────

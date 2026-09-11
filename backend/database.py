@@ -62,9 +62,7 @@ async def init_db() -> None:
 
 
 async def get_db() -> AsyncSession:
-    """FastAPI dependency — yields an async database session."""
+    """FastAPI dependency — yields an async database session with automatic lifecycle management."""
     async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
+        yield session
+

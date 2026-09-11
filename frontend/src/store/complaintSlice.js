@@ -10,6 +10,9 @@
  */
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../services/api';
+import { sendCopilotMessage } from './copilotSlice';
+import { analyzeComplaint } from './analysisSlice';
+
 
 export const saveComplaint = createAsyncThunk(
   'complaint/save',
@@ -39,8 +42,27 @@ export const saveComplaint = createAsyncThunk(
   }
 );
 
+// ── Shared Field Assignment Helper (DRY) ──────────────────────────
+
+const applyFieldsToForm = (state, fields, isAIPopulated = true, forceOverwrite = false) => {
+  Object.entries(fields).forEach(([key, value]) => {
+    if (key in state.formData && value != null) {
+      // Preserve user-edited fields unless explicitly forced (e.g. via Tool 2 voice/chat edit)
+      if (isAIPopulated && state.dirtyFields[key] && !forceOverwrite) {
+        return;
+      }
+      state.formData[key] = value;
+      if (isAIPopulated) {
+        delete state.dirtyFields[key];
+      } else {
+        state.dirtyFields[key] = true;
+      }
+    }
+  });
+};
+
 const initialFormData = {
-  complaint_source: '',
+  complaint_source: 'Email',
   customer_name: '',
   customer_contact: '',
   product_name: '',
@@ -75,28 +97,13 @@ const complaintSlice = createSlice({
       if (!isAIPopulated) {
         state.dirtyFields[field] = true;
       }
-      // Clear save status when user edits
       if (state.saveStatus === 'saved') {
         state.saveStatus = 'idle';
       }
     },
     updateMultipleFields: (state, action) => {
-      const { fields, isAIPopulated, force } = action.payload;
-      Object.entries(fields).forEach(([key, value]) => {
-        // Only populate if field exists in form and value is not null
-        if (key in state.formData && value != null) {
-          // Don't overwrite user-edited fields with AI data unless force is true
-          if (isAIPopulated && state.dirtyFields[key] && !force) {
-            return;
-          }
-          state.formData[key] = value;
-          if (isAIPopulated) {
-            delete state.dirtyFields[key];
-          } else {
-            state.dirtyFields[key] = true;
-          }
-        }
-      });
+      const { fields, isAIPopulated = true, forceOverwrite, force } = action.payload;
+      applyFieldsToForm(state, fields, isAIPopulated, forceOverwrite || force);
     },
     resetForm: () => ({ ...initialState, formData: { ...initialFormData } }),
     setSaveStatus: (state, action) => {
@@ -116,10 +123,28 @@ const complaintSlice = createSlice({
         state.saveStatus = 'error';
         state.validationErrors =
           typeof action.payload === 'object' ? action.payload : {};
+      })
+      // React directly to AI Intake extraction (document upload or text analyze)
+      .addCase(analyzeComplaint.fulfilled, (state, action) => {
+        if (action.payload?.complaint) {
+          applyFieldsToForm(state, action.payload.complaint, true, false);
+        }
+      })
+      // React directly to AI Copilot actions (Tool 1 log and Tool 2 edit)
+      .addCase(sendCopilotMessage.fulfilled, (state, action) => {
+        const data = action.payload;
+        if (!data) return;
+        if (data.action === 'LOG_COMPLAINT' && data.complaint) {
+          applyFieldsToForm(state, data.complaint, true, true);
+        } else if (data.action === 'UPDATE_COMPLAINT' && data.updated_fields) {
+          applyFieldsToForm(state, data.updated_fields, true, true);
+        }
       });
+
   },
 });
 
 export const { updateField, updateMultipleFields, resetForm, setSaveStatus } =
   complaintSlice.actions;
 export default complaintSlice.reducer;
+

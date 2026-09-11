@@ -8,12 +8,10 @@
  */
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../services/api';
-import { updateMultipleFields } from './complaintSlice';
-import { setAnalysisData, updateExtractedData } from './analysisSlice';
 
 export const sendCopilotMessage = createAsyncThunk(
   'copilot/sendMessage',
-  async ({ message, complaintContext }, { dispatch, rejectWithValue }) => {
+  async ({ message, complaintContext }, { rejectWithValue }) => {
     try {
       // Backend expects FormData fields: message, complaint_context
       const formData = new FormData();
@@ -22,24 +20,14 @@ export const sendCopilotMessage = createAsyncThunk(
         formData.append('complaint_context', JSON.stringify(complaintContext));
       }
       const response = await api.post('/api/copilot/message', formData);
-      const data = response.data;
-
-      // Handle AI Tools actions
-      if (data.action === 'LOG_COMPLAINT' && data.complaint) {
-        dispatch(setAnalysisData({ complaint: data.complaint, analysis: data.analysis }));
-        dispatch(updateMultipleFields({ fields: data.complaint, isAIPopulated: true, force: true }));
-      } else if (data.action === 'UPDATE_COMPLAINT' && data.updated_fields) {
-        dispatch(updateExtractedData(data.updated_fields));
-        dispatch(updateMultipleFields({ fields: data.updated_fields, isAIPopulated: true, force: true }));
-      }
-
-      return data;
+      return response.data;
     } catch (error) {
       const detail = error.response?.data?.detail || error.message;
       return rejectWithValue(detail);
     }
   }
 );
+
 
 const initialState = {
   messages: [],

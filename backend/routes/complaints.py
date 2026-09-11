@@ -34,13 +34,11 @@ async def create_complaint(
     payload: ComplaintCreateWithAnalysis,
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a new complaint and optionally persist its AI analysis."""
-    complaint = await ComplaintService.create_complaint(db, payload.complaint)
+    """Create a new complaint and atomically persist its AI analysis in one transaction."""
+    return await ComplaintService.create_complaint(
+        db, payload.complaint, analysis_in=payload.analysis
+    )
 
-    if payload.analysis:
-        await ComplaintService.store_analysis(db, str(complaint.id), payload.analysis)
-
-    return complaint
 
 
 @router.get("", response_model=List[ComplaintResponse])

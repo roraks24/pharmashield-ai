@@ -1,9 +1,15 @@
-"""Pydantic models for Complaint."""
-from pydantic import BaseModel, Field
-from typing import Optional, List
-from datetime import date, datetime
+from pydantic import BaseModel, Field, ConfigDict, model_validator
+from typing import Optional
+from datetime import date, datetime, timezone
 from enum import Enum
 import uuid
+
+class ComplaintSourceEnum(str, Enum):
+    EMAIL = "Email"
+    PORTAL = "Portal"
+    PHONE = "Phone"
+    DOCUMENT = "Document"
+    OTHER = "Other"
 
 class SeverityEnum(str, Enum):
     LOW = "LOW"
@@ -24,8 +30,11 @@ class StatusEnum(str, Enum):
     CLOSED = "Closed"
 
 class ComplaintBase(BaseModel):
-    """Base fields for a complaint."""
-    complaint_source: str = Field(..., description="Email, portal, phone, document, other")
+    """Base fields for a complaint with pharma QA validation."""
+    complaint_source: ComplaintSourceEnum = Field(
+        default=ComplaintSourceEnum.EMAIL,
+        description="Source of the complaint report"
+    )
     customer_name: Optional[str] = None
     customer_contact: Optional[str] = None
     product_name: Optional[str] = None
@@ -36,10 +45,18 @@ class ComplaintBase(BaseModel):
     quantity_affected: Optional[str] = None
     complaint_type: Optional[str] = None
     complaint_date: Optional[date] = None
-    description: str = Field(..., description="The main text description of the complaint")
+    description: str = Field(..., min_length=1, description="The main text description of the complaint")
     severity: Optional[SeverityEnum] = None
     priority: Optional[PriorityEnum] = None
     status: StatusEnum = Field(default=StatusEnum.DRAFT)
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "ComplaintBase":
+        """Verify that expiry date does not precede manufacturing date."""
+        if self.manufacturing_date and self.expiry_date:
+            if self.expiry_date < self.manufacturing_date:
+                raise ValueError("expiry_date cannot precede manufacturing_date")
+        return self
 
 class ComplaintCreate(ComplaintBase):
     """Model used for creating a new complaint."""
@@ -48,8 +65,8 @@ class ComplaintCreate(ComplaintBase):
 class ComplaintResponse(ComplaintBase):
     """Model representing a created complaint."""
     id: uuid.UUID = Field(default_factory=uuid.uuid4)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
