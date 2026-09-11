@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict, model_validator
+from pydantic import BaseModel, Field, ConfigDict, model_validator, field_validator
 from typing import Optional
 from datetime import date, datetime, timezone
 from enum import Enum
@@ -49,6 +49,33 @@ class ComplaintBase(BaseModel):
     severity: Optional[SeverityEnum] = None
     priority: Optional[PriorityEnum] = None
     status: StatusEnum = Field(default=StatusEnum.DRAFT)
+
+    @field_validator("complaint_source", mode="before")
+    @classmethod
+    def normalize_complaint_source(cls, v):
+        if isinstance(v, str) and v.strip():
+            for item in ComplaintSourceEnum:
+                if item.value.lower() == v.strip().lower():
+                    return item
+        return v
+
+    @field_validator("severity", mode="before")
+    @classmethod
+    def normalize_severity(cls, v):
+        if isinstance(v, str) and v.strip():
+            for item in SeverityEnum:
+                if item.value.lower() == v.strip().lower():
+                    return item
+        return v
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def normalize_priority(cls, v):
+        if isinstance(v, str) and v.strip():
+            for item in PriorityEnum:
+                if item.value.lower() == v.strip().lower():
+                    return item
+        return v
 
     @model_validator(mode="after")
     def validate_dates(self) -> "ComplaintBase":

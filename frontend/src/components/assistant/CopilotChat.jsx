@@ -75,46 +75,13 @@ const CopilotChat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Suggested Prompts for Round 1 Demo */}
-      <div className="px-3 pt-2 pb-1 bg-slate-50 border-t border-slate-200">
-        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-          <span>Demo Prompts (Click to fill):</span>
-        </div>
-        <div className="flex flex-wrap gap-1.5 mb-1">
-          <button
-            type="button"
-            onClick={() => setInput("Apollo Pharmacy reported discolored capsules in Amoxicillin capsules 500 mg.")}
-            className="text-[11px] bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 hover:border-indigo-400 rounded-full px-2.5 py-1 text-left transition-colors truncate max-w-full font-medium"
-            title="Tool 1: Log Complaint via Chat"
-          >
-            📋 1. Log: "Apollo Pharmacy reported discolored..."
-          </button>
-          <button
-            type="button"
-            onClick={() => setInput("Sorry, the batch number is BMX24602 and the affected quantity is 48 capsules.")}
-            className="text-[11px] bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 hover:border-indigo-400 rounded-full px-2.5 py-1 text-left transition-colors truncate max-w-full font-medium"
-            title="Tool 2: Edit Complaint via Chat"
-          >
-            ✏️ 2. Edit: "Sorry, batch is BMX24602 & qty is 48 capsules"
-          </button>
-          <button
-            type="button"
-            onClick={() => setInput("Sorry, the batch number is CHG260712A and affected quantity is 50 kg 2 HDPE drums.")}
-            className="text-[11px] bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 hover:border-indigo-400 rounded-full px-2.5 py-1 text-left transition-colors truncate max-w-full font-medium"
-            title="Tool 2: Edit PDF Extracted Complaint"
-          >
-            ✏️ 3. Edit: "Sorry, batch is CHG260712A & qty 50 kg"
-          </button>
-        </div>
-      </div>
-
       <div className="p-3 border-t border-slate-200 bg-white">
         <form onSubmit={handleSend} className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type or click a prompt above to log or edit complaint..."
+            placeholder="Ask me anything about this complaint..."
             className="flex-grow p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
           />
           <button

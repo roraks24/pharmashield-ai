@@ -2,6 +2,7 @@ import React from 'react';
 import FormField from '../common/FormField';
 
 const COMPLAINT_TYPES = [
+  'Product Quality / Physical Appearance',
   'Foreign Matter',
   'Contamination',
   'Packaging/Labeling',

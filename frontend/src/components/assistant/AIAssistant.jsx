@@ -71,7 +71,7 @@ const AIAssistant = () => {
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="h-5 w-5 text-indigo-600" />
           <h2 className="text-xl font-bold text-slate-800">
-            AI Complaint Intake Assistant
+            AIVOA Copilot
           </h2>
           <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide">BETA</span>
         </div>

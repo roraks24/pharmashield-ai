@@ -1,7 +1,7 @@
 """Pydantic models for AI Analysis and Copilot responses."""
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
-from models.complaint import SeverityEnum
+from models.complaint import SeverityEnum, PriorityEnum
 
 class AnalysisResult(BaseModel):
     """AI analysis output including QA risk, completeness, and CAPA recommendations."""
@@ -10,6 +10,7 @@ class AnalysisResult(BaseModel):
     completeness_score: Optional[int] = Field(None, ge=0, le=100)
     missing_fields: Optional[List[str]] = None
     risk_level: Optional[SeverityEnum] = None
+    priority: Optional[PriorityEnum] = None
     risk_reason: Optional[str] = None
     duplicate_score: Optional[float] = None
     duplicate_reason: Optional[str] = None

@@ -40,7 +40,16 @@ export const analyzeComplaint = createAsyncThunk(
 
 const applyAnalysisToState = (state, complaint, analysis) => {
   state.extractionStatus = 'success';
-  state.extractedData = complaint || {};
+  const data = complaint ? { ...complaint } : {};
+  const riskLevel = analysis?.risk_level || data.severity;
+  const priority = analysis?.priority || data.priority;
+  if (riskLevel && !data.severity) {
+    data.severity = riskLevel;
+  }
+  if (!data.priority && (priority || riskLevel)) {
+    data.priority = priority || (riskLevel === 'CRITICAL' ? 'URGENT' : riskLevel === 'HIGH' ? 'HIGH' : 'MEDIUM');
+  }
+  state.extractedData = data;
   state.rawAnalysis = analysis || {};
 
   if (analysis) {
@@ -50,6 +59,7 @@ const applyAnalysisToState = (state, complaint, analysis) => {
     };
     state.risk = {
       level: analysis.risk_level,
+      priority: analysis.priority || data.priority,
       reason: analysis.risk_reason,
       next_action: analysis.recommended_next_action,
       root_cause_hypotheses: analysis.root_cause_hypotheses,

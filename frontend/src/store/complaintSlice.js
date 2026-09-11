@@ -129,6 +129,15 @@ const complaintSlice = createSlice({
         if (action.payload?.complaint) {
           applyFieldsToForm(state, action.payload.complaint, true, false);
         }
+        // Ensure severity and priority are synchronized from analysis if not set in complaint
+        const riskLevel = action.payload?.analysis?.risk_level || action.payload?.complaint?.severity;
+        const priority = action.payload?.analysis?.priority || action.payload?.complaint?.priority;
+        if (riskLevel && !state.formData.severity && !state.dirtyFields.severity) {
+          state.formData.severity = riskLevel;
+        }
+        if (!state.formData.priority && !state.dirtyFields.priority) {
+          state.formData.priority = priority || (riskLevel === 'CRITICAL' ? 'URGENT' : riskLevel === 'HIGH' ? 'HIGH' : riskLevel ? 'MEDIUM' : '');
+        }
       })
       // React directly to AI Copilot actions (Tool 1 log and Tool 2 edit)
       .addCase(sendCopilotMessage.fulfilled, (state, action) => {
@@ -136,6 +145,14 @@ const complaintSlice = createSlice({
         if (!data) return;
         if (data.action === 'LOG_COMPLAINT' && data.complaint) {
           applyFieldsToForm(state, data.complaint, true, true);
+          const riskLevel = data.analysis?.risk_level || data.complaint?.severity;
+          const priority = data.analysis?.priority || data.complaint?.priority;
+          if (riskLevel && !state.formData.severity && !state.dirtyFields.severity) {
+            state.formData.severity = riskLevel;
+          }
+          if (!state.formData.priority && !state.dirtyFields.priority) {
+            state.formData.priority = priority || (riskLevel === 'CRITICAL' ? 'URGENT' : riskLevel === 'HIGH' ? 'HIGH' : riskLevel ? 'MEDIUM' : '');
+          }
         } else if (data.action === 'UPDATE_COMPLAINT' && data.updated_fields) {
           applyFieldsToForm(state, data.updated_fields, true, true);
         }

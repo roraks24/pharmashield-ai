@@ -85,7 +85,7 @@ Valid field names:
 - "manufacturing_date": "YYYY-MM-DD" or null
 - "expiry_date": "YYYY-MM-DD" or null
 - "quantity_affected": string
-- "complaint_type": one of ("Foreign Matter", "Contamination", "Packaging/Labeling", "Potency/Efficacy", "Stability", "Adverse Reaction", "Documentation", "Other")
+- "complaint_type": one of ("Product Quality / Physical Appearance", "Foreign Matter", "Contamination", "Packaging/Labeling", "Potency/Efficacy", "Stability", "Adverse Reaction", "Documentation", "Other")
 - "complaint_date": "YYYY-MM-DD" or null
 - "description": string
 - "severity": one of ("LOW", "MEDIUM", "HIGH", "CRITICAL")

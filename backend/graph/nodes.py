@@ -131,8 +131,8 @@ def _call_groq(
 # ── Node 1: Extract ──────────────────────────────────────────────
 
 EXTRACTION_SYSTEM = (
-    "You are a precise pharmaceutical complaint data extraction assistant. "
-    "Extract structured data from raw complaint text. "
+    "You are an expert pharmaceutical Quality Assurance (QA) data extraction assistant. "
+    "Extract structured data from raw customer complaint text following Good Manufacturing Practice (GMP) principles. "
     "Return ONLY valid JSON. Use null for fields not found in the text. "
     "Never invent information that is not present."
 )
@@ -150,10 +150,22 @@ Return a JSON object with exactly these keys:
   "manufacturing_date": "YYYY-MM-DD or null",
   "expiry_date": "YYYY-MM-DD or null",
   "quantity_affected": "quantity with unit, or null",
-  "complaint_type": "Foreign Matter | Contamination | Packaging/Labeling | Potency/Efficacy | Stability | Adverse Reaction | Documentation | Other",
+  "complaint_type": "Product Quality / Physical Appearance | Foreign Matter | Contamination | Packaging/Labeling | Potency/Efficacy | Stability | Adverse Reaction | Documentation | Other",
   "complaint_date": "YYYY-MM-DD or null",
   "description": "detailed complaint narrative (required)"
 }}
+
+COMPLAINT TYPE CLASSIFICATION RULES:
+- Primary Defect Rule: Classify based on the core quality issue affecting the pharmaceutical product and patient safety.
+- "Product Quality / Physical Appearance": Physical defects of the dosage form itself (such as tablet discoloration, mottling, capping, chipping, broken units, texture/hardness changes, odor, precipitate). When BOTH intrinsic product physical defects (e.g. discolored tablets) and secondary packaging defects (e.g. deformed blister pocket, crushed carton) are present, ALWAYS prioritize "Product Quality / Physical Appearance" over "Packaging/Labeling".
+- "Foreign Matter": Particulate contamination, hair, glass, plastic, insect, fibers found in or with the product.
+- "Contamination": Chemical, biological, microbial, or cross-contamination.
+- "Packaging/Labeling": Classify here ONLY when the complaint is strictly about external packaging, container, closures, labeling, missing leaflets, or barcode issues WITHOUT intrinsic dosage form physical defect or degradation.
+- "Potency/Efficacy": Lack of therapeutic effect, subpotency, superpotency.
+- "Stability": Degradation over time, shelf-life failure, phase separation, melting.
+- "Adverse Reaction": Clinical adverse events or side effects reported by patient/physician.
+- "Documentation": Certificates of analysis, batch release documentation discrepancies.
+- "Other": Any issue not falling into the above categories.
 
 COMPLAINT TEXT:
 ---
@@ -174,7 +186,7 @@ def extract_complaint(state: ComplaintGraphState) -> dict:
         if not extracted.get("description"):
             extracted["description"] = state["raw_text"]
         if not extracted.get("complaint_source"):
-            extracted["complaint_source"] = "other"
+            extracted["complaint_source"] = "Other"
 
         return {"extracted_complaint": extracted}
 
@@ -183,7 +195,7 @@ def extract_complaint(state: ComplaintGraphState) -> dict:
         return {
             "extracted_complaint": {
                 "description": state["raw_text"],
-                "complaint_source": "other",
+                "complaint_source": "Other",
             },
             "errors": state.get("errors", []) + [f"Extraction failed: {exc}"],
         }
@@ -192,9 +204,15 @@ def extract_complaint(state: ComplaintGraphState) -> dict:
 # ── Node 2: Validate ─────────────────────────────────────────────
 
 _VALID_COMPLAINT_TYPES = {
-    "Foreign Matter", "Contamination", "Packaging/Labeling",
-    "Potency/Efficacy", "Stability", "Adverse Reaction",
-    "Documentation", "Other",
+    "Product Quality / Physical Appearance",
+    "Foreign Matter",
+    "Contamination",
+    "Packaging/Labeling",
+    "Potency/Efficacy",
+    "Stability",
+    "Adverse Reaction",
+    "Documentation",
+    "Other",
 }
 
 _VALID_SEVERITIES = {"LOW", "MEDIUM", "HIGH", "CRITICAL"}
@@ -208,16 +226,45 @@ def validate_fields(state: ComplaintGraphState) -> dict:
 
     validated = dict(extracted)
 
-    # Normalise complaint_type
+    # Normalise complaint_type with smart synonym matching
     ct = validated.get("complaint_type", "")
-    if ct and ct not in _VALID_COMPLAINT_TYPES:
-        # Best-effort fuzzy match
-        for valid in _VALID_COMPLAINT_TYPES:
-            if valid.lower() in ct.lower() or ct.lower() in valid.lower():
-                validated["complaint_type"] = valid
+    if ct:
+        ct_lower = ct.lower()
+        if any(k in ct_lower for k in ["physical", "appearance", "discolor", "defect", "product quality", "color", "mottl"]):
+            validated["complaint_type"] = "Product Quality / Physical Appearance"
+        elif "foreign" in ct_lower or "particle" in ct_lower:
+            validated["complaint_type"] = "Foreign Matter"
+        elif "contamin" in ct_lower:
+            validated["complaint_type"] = "Contamination"
+        elif "packag" in ct_lower or "label" in ct_lower:
+            validated["complaint_type"] = "Packaging/Labeling"
+        elif "potency" in ct_lower or "efficac" in ct_lower:
+            validated["complaint_type"] = "Potency/Efficacy"
+        elif "stabil" in ct_lower:
+            validated["complaint_type"] = "Stability"
+        elif "adverse" in ct_lower or "reaction" in ct_lower:
+            validated["complaint_type"] = "Adverse Reaction"
+        elif "doc" in ct_lower:
+            validated["complaint_type"] = "Documentation"
+        elif ct not in _VALID_COMPLAINT_TYPES:
+            for valid in _VALID_COMPLAINT_TYPES:
+                if valid.lower() in ct_lower or ct_lower in valid.lower():
+                    validated["complaint_type"] = valid
+                    break
+            else:
+                validated["complaint_type"] = "Other"
+
+    # Normalise complaint_source
+    cs = str(validated.get("complaint_source") or "").strip()
+    if cs:
+        for valid in ["Email", "Portal", "Phone", "Document", "Other"]:
+            if valid.lower() == cs.lower():
+                validated["complaint_source"] = valid
                 break
         else:
-            validated["complaint_type"] = "Other"
+            validated["complaint_source"] = "Other"
+    else:
+        validated["complaint_source"] = "Other"
 
     # Normalise severity if present
     sev = validated.get("severity", "")
@@ -278,16 +325,18 @@ def check_completeness(state: ComplaintGraphState) -> dict:
 
 RISK_SYSTEM = (
     "You are a pharmaceutical quality assurance expert. "
-    "Assess complaint risk based on patient safety impact, product quality, "
-    "and regulatory implications. Always cite evidence from the complaint. "
+    "Assess complaint risk, initial severity, and investigation priority based on patient safety impact, "
+    "product quality, and regulatory implications. Always cite evidence from the complaint. "
     "Use cautious language — these are suggestions, not final decisions."
 )
 
-RISK_PROMPT = """Assess the risk of this pharmaceutical complaint.
+RISK_PROMPT = """Assess the risk, initial severity, and investigation priority of this pharmaceutical complaint.
 
 Return a JSON object with exactly these keys:
 {{
   "risk_level": "LOW | MEDIUM | HIGH | CRITICAL",
+  "severity": "LOW | MEDIUM | HIGH | CRITICAL",
+  "priority": "LOW | MEDIUM | HIGH | URGENT",
   "risk_reason": "concise rationale citing complaint facts",
   "recommended_next_action": "suggested immediate next step",
   "root_cause_hypotheses": ["hypothesis 1", "hypothesis 2"],
@@ -302,7 +351,7 @@ COMPLETENESS INFO:
 
 
 def assess_risk(state: ComplaintGraphState) -> dict:
-    """Node 4 — AI risk assessment with root-cause and CAPA suggestions."""
+    """Node 4 — AI risk assessment with root-cause, CAPA, severity, and priority suggestions."""
     try:
         raw = _call_groq(
             RISK_SYSTEM,
@@ -312,18 +361,56 @@ def assess_risk(state: ComplaintGraphState) -> dict:
             ),
         )
         assessment = parse_json_from_llm(raw)
-        return {"risk_assessment": assessment}
+
+        # Standardize risk_level
+        risk_lvl = str(assessment.get("risk_level", "MEDIUM")).upper()
+        if risk_lvl not in _VALID_SEVERITIES:
+            risk_lvl = "MEDIUM"
+        assessment["risk_level"] = risk_lvl
+
+        # Severity matches risk level if not explicitly provided or invalid
+        sev = str(assessment.get("severity", risk_lvl)).upper()
+        if sev not in _VALID_SEVERITIES:
+            sev = risk_lvl
+        assessment["severity"] = sev
+
+        # Priority mapped based on GMP quality assurance SLAs
+        prio = str(assessment.get("priority", "")).upper()
+        if prio not in {"LOW", "MEDIUM", "HIGH", "URGENT"}:
+            prio = (
+                "URGENT" if risk_lvl == "CRITICAL"
+                else "HIGH" if risk_lvl == "HIGH"
+                else "MEDIUM" if risk_lvl == "MEDIUM"
+                else "LOW"
+            )
+        assessment["priority"] = prio
+
+        # Update validated_complaint in graph state so downstream nodes, DB, and UI receive severity and priority
+        validated = dict(state.get("validated_complaint") or {})
+        validated["severity"] = sev
+        validated["priority"] = prio
+
+        return {
+            "risk_assessment": assessment,
+            "validated_complaint": validated,
+        }
 
     except Exception as exc:
         logger.error("assess_risk failed: %s", exc)
+        validated = dict(state.get("validated_complaint") or {})
+        validated.setdefault("severity", "MEDIUM")
+        validated.setdefault("priority", "MEDIUM")
         return {
             "risk_assessment": {
                 "risk_level": "MEDIUM",
+                "severity": "MEDIUM",
+                "priority": "MEDIUM",
                 "risk_reason": "Unable to perform AI assessment — manual review recommended.",
                 "recommended_next_action": "Manual review by QA team",
                 "root_cause_hypotheses": [],
                 "capa_recommendations": [],
             },
+            "validated_complaint": validated,
             "errors": state.get("errors", []) + [f"Risk assessment failed: {exc}"],
         }
 

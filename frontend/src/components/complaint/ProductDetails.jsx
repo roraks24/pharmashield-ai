@@ -12,7 +12,7 @@ const ProductDetails = () => (
       <FormField name="batch_number" label="Batch/Lot Number" />
       <FormField name="manufacturing_date" label="Manufacturing Date" type="date" />
       <FormField name="expiry_date" label="Expiry Date" type="date" />
-      <FormField name="quantity_affected" label="Quantity Affected" suffix="kg" />
+      <FormField name="quantity_affected" label="Quantity Affected" />
     </div>
   </div>
 );

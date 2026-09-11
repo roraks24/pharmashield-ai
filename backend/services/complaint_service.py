@@ -252,6 +252,21 @@ class ComplaintService:
         completeness_data = result.get("completeness_result", {})
         summary_text = result.get("summary")
 
+        # Synchronize risk assessment severity and priority into extracted complaint data
+        risk_level = risk_data.get("risk_level") or "MEDIUM"
+        severity_val = risk_data.get("severity") or risk_level
+        priority_val = risk_data.get("priority") or (
+            "URGENT" if risk_level == "CRITICAL"
+            else "HIGH" if risk_level == "HIGH"
+            else "MEDIUM" if risk_level == "MEDIUM"
+            else "LOW"
+        )
+
+        if not extracted_data.get("severity"):
+            extracted_data["severity"] = severity_val
+        if not extracted_data.get("priority"):
+            extracted_data["priority"] = priority_val
+
         # Pharma duplicate check against database
         dup_info = await cls.find_potential_duplicates(
             db,
@@ -266,7 +281,8 @@ class ComplaintService:
             summary=summary_text,
             completeness_score=completeness_data.get("score"),
             missing_fields=completeness_data.get("missing_fields"),
-            risk_level=risk_data.get("risk_level"),
+            risk_level=risk_level,
+            priority=priority_val,
             risk_reason=risk_data.get("risk_reason"),
             recommended_next_action=risk_data.get("recommended_next_action"),
             root_cause_hypotheses=risk_data.get("root_cause_hypotheses"),
