@@ -34,25 +34,26 @@ const FormField = ({
     dispatch(updateField({ field: name, value: e.target.value, isAIPopulated: false }));
   };
 
-
-  const baseInputStyle = `w-full p-2 border rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-colors ${
-    isAiPopulated ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-300'
+  const baseInputStyle = `w-full p-2 border rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm transition-colors ${
+    isAiPopulated ? 'bg-teal-50/70 border-teal-300 text-teal-950 font-medium' : 'bg-white border-slate-300 text-slate-900'
   } ${placeholder ? 'placeholder-slate-400 placeholder:italic' : ''}`;
 
   return (
     <div className={`mb-4 ${className}`}>
-      <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1.5">
-        <span>{label}</span>
+      <div className="flex items-center justify-between mb-1">
+        <label className="block text-sm font-medium text-slate-700">
+          {label}
+        </label>
         {isAiPopulated && (
           <span
-            className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-indigo-600 bg-indigo-100/70 px-1.5 py-0.5 rounded"
-            title="Auto-extracted by AI"
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-800 bg-teal-100/90 border border-teal-200 px-1.5 py-0.5 rounded shadow-2xs"
+            title="Auto-extracted by PharmaShield AI"
           >
-            <Sparkles className="h-3 w-3 text-indigo-500" />
-            AI
+            <Sparkles className="h-3 w-3 text-teal-600" />
+            AI Extracted
           </span>
         )}
-      </label>
+      </div>
 
       <div className="relative">
         {type === 'select' ? (

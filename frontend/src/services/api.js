@@ -1,14 +1,14 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '',
+  baseURL: import.meta.env.VITE_API_URL || '',
 });
 
-// Optionally add interceptors here for auth tokens, etc.
+// Response interceptor
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error);
+    console.error('PharmaShield API Error:', error);
     return Promise.reject(error);
   }
 );

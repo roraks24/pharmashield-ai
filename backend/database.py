@@ -4,7 +4,7 @@ Uses SQLAlchemy async engine. Defaults to SQLite for local development;
 switch DATABASE_URL to a PostgreSQL connection string for production.
 
 Example PostgreSQL URL:
-    postgresql+asyncpg://user:password@localhost:5432/aivoa
+    postgresql+asyncpg://user:password@localhost:5432/pharmashield
 
 Example SQLite URL (default):
     sqlite+aiosqlite:///./complaints.db

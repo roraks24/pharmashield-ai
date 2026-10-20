@@ -44,7 +44,7 @@ const ComplaintList = () => {
               className="hover:bg-slate-50 cursor-pointer transition-colors"
             >
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-indigo-600 font-mono">{String(complaint.id).slice(0, 8)}…</div>
+                <div className="text-sm font-medium text-teal-600 font-mono">{String(complaint.id).slice(0, 8)}…</div>
                 <div className="text-sm text-slate-500">{complaint.created_at ? new Date(complaint.created_at).toLocaleDateString() : '—'}</div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">

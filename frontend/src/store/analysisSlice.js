@@ -118,6 +118,7 @@ const analysisSlice = createSlice({
   initialState,
   reducers: {
     resetAnalysis: () => initialState,
+    clearAnalysis: () => initialState,
     setAnalysisData: (state, action) => {
       const { complaint, analysis } = action.payload;
       applyAnalysisToState(state, complaint, analysis);
@@ -154,7 +155,5 @@ const analysisSlice = createSlice({
   },
 });
 
-export const { resetAnalysis, setAnalysisData, updateExtractedData } = analysisSlice.actions;
+export const { resetAnalysis, clearAnalysis, setAnalysisData, updateExtractedData } = analysisSlice.actions;
 export default analysisSlice.reducer;
-
-

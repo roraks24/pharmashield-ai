@@ -13,7 +13,7 @@ const RiskAssessment = () => {
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
-          Risk Assessment
+          Risk Assessment & Triage
         </h3>
         <RiskBadge level={risk.level} />
       </div>
@@ -21,10 +21,10 @@ const RiskAssessment = () => {
         <p className="text-sm text-slate-700">{risk.reason}</p>
       </div>
       {risk.next_action && (
-        <div className="flex items-start gap-2 mt-2 text-sm text-indigo-700 bg-indigo-50 p-3 rounded-md">
-          <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+        <div className="flex items-start gap-2 mt-2 text-sm text-teal-900 bg-teal-50 p-3 rounded-md border border-teal-200">
+          <Info className="h-4 w-4 mt-0.5 flex-shrink-0 text-teal-700" />
           <div>
-            <strong>Recommended Action:</strong> {risk.next_action}
+            <strong className="text-teal-950">Recommended Action:</strong> {risk.next_action}
           </div>
         </div>
       )}

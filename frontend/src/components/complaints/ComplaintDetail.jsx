@@ -43,7 +43,7 @@ const ComplaintDetail = () => {
     <div>
       <button
         onClick={() => navigate('/complaints')}
-        className="mb-4 flex items-center gap-2 text-sm text-slate-600 hover:text-indigo-600 transition-colors"
+        className="mb-4 flex items-center gap-2 text-sm text-slate-600 hover:text-teal-600 transition-colors"
       >
         <ArrowLeft className="h-4 w-4" /> Back to List
       </button>
@@ -53,7 +53,7 @@ const ComplaintDetail = () => {
         <div className="flex justify-between items-start mb-6 pb-4 border-b border-slate-200">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 mb-2 flex items-center gap-2">
-              <FileText className="h-6 w-6 text-indigo-600" />
+              <FileText className="h-6 w-6 text-teal-600" />
               Complaint Record
             </h1>
             <p className="text-sm font-mono text-slate-500 mb-2">{complaint.id}</p>
@@ -129,9 +129,9 @@ const ComplaintDetail = () => {
 
             {/* Summary */}
             {analysis.summary && (
-              <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-lg mb-4">
-                <div className="text-xs font-semibold text-indigo-600 uppercase mb-1">AI Summary</div>
-                <p className="text-sm text-indigo-900">{analysis.summary}</p>
+              <div className="bg-teal-50 border border-teal-200 p-4 rounded-lg mb-4">
+                <div className="text-xs font-semibold text-teal-600 uppercase mb-1">AI Summary</div>
+                <p className="text-sm text-teal-950">{analysis.summary}</p>
               </div>
             )}
 
@@ -146,7 +146,7 @@ const ComplaintDetail = () => {
                   </div>
                   <p className="text-sm text-slate-600">{analysis.risk_reason}</p>
                   {analysis.recommended_next_action && (
-                    <p className="text-sm text-indigo-700 mt-2 bg-indigo-50 p-2 rounded">
+                    <p className="text-sm text-teal-900 mt-2 bg-teal-50 p-2 rounded">
                       <strong>Next Step:</strong> {analysis.recommended_next_action}
                     </p>
                   )}
@@ -157,7 +157,7 @@ const ComplaintDetail = () => {
               {analysis.completeness_score != null && (
                 <div className="bg-white p-4 rounded-lg border border-slate-200">
                   <div className="flex items-center gap-2 mb-2">
-                    <Target className="h-4 w-4 text-indigo-500" />
+                    <Target className="h-4 w-4 text-teal-600" />
                     <span className="text-sm font-semibold">Completeness</span>
                     <span className={`text-sm font-bold ${analysis.completeness_score >= 80 ? 'text-emerald-600' : analysis.completeness_score >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
                       {analysis.completeness_score}%

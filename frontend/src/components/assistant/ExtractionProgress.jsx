@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { CheckCircle, Circle, AlertCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle } from 'lucide-react';
 
 const ExtractionProgress = () => {
   const { extractionStatus } = useSelector((state) => state.analysis);
@@ -26,24 +26,24 @@ const ExtractionProgress = () => {
   if (extractionStatus === 'idle') return null;
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200 p-4 mt-4">
+    <div className="bg-white rounded-lg border border-slate-200 p-4 mt-4 shadow-sm">
       <h3 className="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide">EXTRACTION PROGRESS</h3>
       
       {extractionStatus === 'processing' && (
         <div className="mb-4">
           <div className="flex justify-between text-xs mb-1">
             <span className="text-slate-600 font-medium">Extracting...</span>
-            <span className="text-indigo-600 font-bold">{progress}%</span>
+            <span className="text-teal-600 font-bold">{progress}%</span>
           </div>
           <div className="w-full bg-slate-200 rounded-full h-2">
             <div 
-              className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+              className="bg-teal-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             ></div>
           </div>
           <p className="text-xs text-slate-500 mt-2">
-            Analyzing document content and extracting key details...
-            <br />Please wait, this may take a few moments.
+            Analyzing document content and extracting key clinical details...
+            <br />Please wait, LangGraph multi-stage pipeline is running.
           </p>
         </div>
       )}
@@ -53,21 +53,21 @@ const ExtractionProgress = () => {
           <div className="flex items-center gap-3">
             <CheckCircle className="h-5 w-5 text-emerald-500" />
             <span className="text-sm text-slate-600">
-              Extracting entities...
+              Extracting entities and batch metadata...
             </span>
           </div>
           
           <div className="flex items-center gap-3">
             <CheckCircle className="h-5 w-5 text-emerald-500" />
             <span className="text-sm text-slate-600">
-              Running risk assessment...
+              Running risk assessment & CAPA prioritization...
             </span>
           </div>
 
           <div className="flex items-center gap-3">
             <CheckCircle className="h-5 w-5 text-emerald-500" />
             <span className="text-sm text-slate-600">
-              Evaluating completeness...
+              Evaluating compliance completeness...
             </span>
           </div>
         </div>
@@ -77,7 +77,7 @@ const ExtractionProgress = () => {
         <div className="flex items-center gap-3">
           <AlertCircle className="h-5 w-5 text-red-500" />
           <span className="text-sm text-red-600">
-            Extraction failed. Please try again.
+            Extraction failed. Please check backend connection and try again.
           </span>
         </div>
       )}

@@ -37,12 +37,12 @@ const SummaryCard = () => {
   if (extractionStatus !== 'success' || !summary) return null;
 
   return (
-    <div className="bg-indigo-50 rounded-lg border border-indigo-200 p-4 mt-4">
-      <h3 className="text-sm font-semibold text-indigo-800 flex items-center gap-2 mb-2">
-        <FileText className="h-4 w-4" />
-        AI Summary
+    <div className="bg-teal-50 rounded-lg border border-teal-200 p-4 mt-4">
+      <h3 className="text-sm font-semibold text-teal-800 flex items-center gap-2 mb-2">
+        <FileText className="h-4 w-4 text-teal-600" />
+        AI Pharmacovigilance Summary
       </h3>
-      <p className="text-sm text-indigo-900 leading-relaxed">{summary}</p>
+      <p className="text-sm text-teal-950 leading-relaxed">{summary}</p>
     </div>
   );
 };
@@ -69,12 +69,13 @@ const AIAssistant = () => {
     <div className="flex flex-col h-full overflow-y-auto pr-2 custom-scrollbar">
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="h-5 w-5 text-indigo-600" />
+          <Sparkles className="h-5 w-5 text-teal-600" />
           <h2 className="text-xl font-bold text-slate-800">
-            AIVOA Copilot
+            PharmaShield Copilot
           </h2>
-          <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide">BETA</span>
+          <span className="bg-teal-100 text-teal-800 text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide">AI AGENT</span>
         </div>
+        <p className="text-xs text-slate-500">Autonomous complaint parsing, quality triage & CAPA generation</p>
       </div>
 
       <FileUpload />

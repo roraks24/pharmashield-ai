@@ -1,4 +1,4 @@
-"""Models package for AIVOA complaint management.
+"""Models package for PharmaShield AI complaint management.
 
 Exports:
     Pydantic Schemas:

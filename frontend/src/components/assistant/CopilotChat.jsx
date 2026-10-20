@@ -38,11 +38,11 @@ const CopilotChat = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200 flex flex-col h-[400px] mt-4 mb-2">
+    <div className="bg-white rounded-lg border border-slate-200 flex flex-col h-[400px] mt-4 mb-2 shadow-sm">
       <div className="p-3 border-b border-slate-200 bg-white rounded-t-lg">
         <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2">
-          <Bot className="h-4 w-4 text-indigo-600" />
-          AI ASSISTANT
+          <Bot className="h-4 w-4 text-teal-600" />
+          PHARMASHIELD COPILOT
         </h3>
       </div>
       
@@ -50,7 +50,7 @@ const CopilotChat = () => {
         {/* Initial bot message */}
         <div className="flex justify-start">
           <div className="max-w-[85%] rounded-lg p-3 text-sm bg-slate-100 text-slate-800 rounded-bl-none">
-            Upload a complaint document or paste text above. I will automatically extract the details and populate the form for you.
+            Upload a complaint document or paste text above. I will automatically extract the details, evaluate risk, check compliance, and populate the form for you.
           </div>
         </div>
 
@@ -58,7 +58,7 @@ const CopilotChat = () => {
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[85%] rounded-lg p-3 text-sm whitespace-pre-wrap ${
               msg.role === 'user' 
-                ? 'bg-indigo-600 text-white rounded-br-none shadow-sm' 
+                ? 'bg-teal-600 text-white rounded-br-none shadow-sm' 
                 : 'bg-slate-100 text-slate-800 rounded-bl-none border border-slate-200'
             }`}>
               {msg.content}
@@ -68,7 +68,7 @@ const CopilotChat = () => {
         {loading && (
           <div className="flex justify-start">
             <div className="bg-slate-100 rounded-lg rounded-bl-none p-3 text-sm text-slate-600 flex items-center gap-2 border border-slate-200">
-              <LoadingSpinner size="sm" /> AI is processing your request...
+              <LoadingSpinner size="sm" /> PharmaShield AI is analyzing...
             </div>
           </div>
         )}
@@ -81,19 +81,19 @@ const CopilotChat = () => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask me anything about this complaint..."
-            className="flex-grow p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+            placeholder="Ask anything about this complaint, CAPA, or risk..."
+            className="flex-grow p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
           />
           <button
             type="submit"
             disabled={!input.trim() || loading}
-            className="p-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-70 transition-colors"
+            className="p-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 disabled:opacity-70 transition-colors"
           >
             <Send className="h-4 w-4" />
           </button>
         </form>
         <p className="text-[10px] text-center text-slate-400 mt-2">
-          AI responses may contain errors. Please verify information.
+          AI responses may contain errors. Please verify clinical and batch information.
         </p>
       </div>
     </div>

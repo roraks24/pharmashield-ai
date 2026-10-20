@@ -26,14 +26,14 @@ async def lifespan(app: FastAPI):
     """Application lifecycle — create DB tables on startup."""
     logger.info("Initialising database…")
     await init_db()
-    logger.info("AIVOA API ready.")
+    logger.info("PharmaShield AI API ready.")
     yield
     logger.info("Shutting down.")
 
 
 app = FastAPI(
-    title="AIVOA API",
-    description="AI-Powered Customer Complaint Management System API",
+    title="PharmaShield AI API",
+    description="Autonomous Pharmacovigilance & Quality Complaint Intelligence System API",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -55,7 +55,7 @@ app.include_router(copilot.router, prefix="/api/copilot", tags=["copilot"])
 @app.get("/health", tags=["system"])
 async def health_check():
     """Health check endpoint."""
-    return {"status": "ok", "version": "1.0.0"}
+    return {"status": "ok", "app": "PharmaShield AI", "version": "1.0.0"}
 
 
 if __name__ == "__main__":

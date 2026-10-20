@@ -11,7 +11,7 @@ const CompletenessCheck = () => {
     <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-4 mt-4">
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-          <Target className="h-4 w-4 text-indigo-500" />
+          <Target className="h-4 w-4 text-teal-600" />
           Data Completeness
         </h3>
         <span className={`text-sm font-bold ${completeness.score >= 80 ? 'text-emerald-600' : completeness.score >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
@@ -21,7 +21,7 @@ const CompletenessCheck = () => {
       
       <div className="w-full bg-slate-200 rounded-full h-2 mb-4">
         <div 
-          className={`h-2 rounded-full ${completeness.score >= 80 ? 'bg-emerald-500' : completeness.score >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} 
+          className={`h-2 rounded-full transition-all duration-500 ${completeness.score >= 80 ? 'bg-emerald-500' : completeness.score >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} 
           style={{ width: `${completeness.score}%` }}
         ></div>
       </div>

@@ -64,7 +64,7 @@ async def analyze_complaint(
 # ── Copilot Agentic Intent Router System Prompt ───────────────────
 
 COPILOT_ROUTER_SYSTEM = """\
-You are the AI Assistant for AIVOA, an AI-powered pharmaceutical complaint management system.
+You are the AI Assistant for PharmaShield AI, an autonomous pharmaceutical complaint management and pharmacovigilance intelligence system.
 Your job is to analyze the user's message and the current complaint context, and decide which action to take:
 
 1. "UPDATE_COMPLAINT": The user is updating, correcting, or providing specific values for fields in the current complaint form.
