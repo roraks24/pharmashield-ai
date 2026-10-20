@@ -3,7 +3,7 @@
 # 🛡️ PharmaShield AI
 ### Autonomous Pharmacovigilance & Pharmaceutical Complaint Intelligence Platform
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Froraks24%2Faivoa-pharma-complaint-system&root-directory=frontend)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Froraks24%2Fpharmashield-ai&root-directory=frontend)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![LangGraph](https://img.shields.io/badge/Orchestration-LangGraph-FF6F00?style=for-the-badge)](https://langchain-ai.github.io/langgraph/)
 [![Groq AI](https://img.shields.io/badge/Inference-Groq%20Cloud-F55036?style=for-the-badge)](https://groq.com/)
@@ -95,7 +95,7 @@ Built with a sleek, clinical **Medical Emerald & Slate** design system:
 ### Option 1: 1-Click Vercel Deploy (Recommended)
 Click the button below to deploy the frontend web client directly to Vercel:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Froraks24%2Faivoa-pharma-complaint-system&root-directory=frontend)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Froraks24%2Fpharmashield-ai&root-directory=frontend)
 
 1. Connect your GitHub account and import the repository.
 2. In **Root Directory**, specify `frontend` (or leave default if using the root `vercel.json`).
@@ -197,7 +197,7 @@ npm run dev
 ## 📂 Project Structure
 
 ```
-aivoa-pharma-complaint-system/
+pharmashield-ai/
 ├── frontend/                     # React 19 + Redux Toolkit Web App
 │   ├── src/
 │   │   ├── components/
