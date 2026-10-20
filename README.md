@@ -3,6 +3,7 @@
 # 🛡️ PharmaShield AI
 ### Autonomous Pharmacovigilance & Pharmaceutical Complaint Intelligence Platform
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-pharmashield--ai--deployment.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://pharmashield-ai-deployment.vercel.app)
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Froraks24%2Fpharmashield-ai&root-directory=frontend)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![LangGraph](https://img.shields.io/badge/Orchestration-LangGraph-FF6F00?style=for-the-badge)](https://langchain-ai.github.io/langgraph/)
@@ -16,7 +17,7 @@
 
 **Intelligent, compliant, and autonomous customer complaint lifecycle management for pharmaceutical manufacturing and quality assurance.**
 
-[🚀 Deploy to Vercel](#-deploying-to-vercel) · [🏗️ Architecture & Workflow](#-system-architecture) · [⚡ Quick Start](#-quick-start-local-development) · [📑 API Reference](#-api-endpoints)
+[🌐 Explore Live Application](https://pharmashield-ai-deployment.vercel.app) · [🚀 Deploy with Vercel](#-deployment--live-application) · [🏗️ Architecture & Workflow](#-system-architecture) · [⚡ Quick Start](#-quick-start-local-development) · [📑 API Reference](#-api-endpoints)
 
 </div>
 
@@ -90,10 +91,14 @@ Built with a sleek, clinical **Medical Emerald & Slate** design system:
 
 ---
 
-## 🌐 Deploying to Vercel
+## 🌐 Deployment & Live Application
 
-### Option 1: 1-Click Vercel Deploy (Recommended)
-Click the button below to deploy the frontend web client directly to Vercel:
+### 🚀 Production URL
+The frontend application is live and hosted on Vercel:
+> 🔗 **[https://pharmashield-ai-deployment.vercel.app](https://pharmashield-ai-deployment.vercel.app)**
+
+### 1-Click Vercel Deploy (Clone & Host Your Own)
+Deploy your own instance of the web client directly to Vercel:
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Froraks24%2Fpharmashield-ai&root-directory=frontend)
 
@@ -102,12 +107,6 @@ Click the button below to deploy the frontend web client directly to Vercel:
 3. Under **Environment Variables**, set:
    - `VITE_API_URL`: Your hosted backend URL (e.g., Render, Railway, or VPS).
 4. Click **Deploy**.
-
-### Option 2: Deploy via Vercel CLI
-```bash
-cd frontend
-npx vercel
-```
 
 ---
 
